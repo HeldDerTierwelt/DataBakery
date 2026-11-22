@@ -4,8 +4,9 @@ This file tells coding agents (Claude Code, Codex, Cursor, …) what this projec
 
 ## Team
 
-[Names and who is responsible for what, e.g. data preparation, baseline model, neural network, presentation.]
+Christine Avery, Zhouling Zhang, Alexander Goy  
 
+Responsibilites (tbd)
 ## Data
 
 - Sales, weather and Kiel Week data: see the [dataset documentation](https://github.com/opencampus-sh/intro-to-data-science-and-ml/blob/main/data/bakery/README.md). Load the files from `https://raw.githubusercontent.com/opencampus-sh/intro-to-data-science-and-ml/main/data/bakery/`.
@@ -27,3 +28,11 @@ This file tells coding agents (Claude Code, Codex, Cursor, …) what this projec
 - Questions about the decision, the audiences, what counts as success, what is known in advance, how to split the data and which checks to run are the team’s to decide. If the canvas or the decision log does not settle them yet, ask; do not decide them yourself.
 - Only work inside this repository. Ask before deleting files, installing software outside the project environment or pushing to GitHub.
 - Never write passwords, API keys or personal data into files.
+
+## Agentic data science
+
+- Canvas: `CANVAS.md` (read before any analysis work; update when something is decided)
+- Glossary: `GLOSSARY.md`; decisions: `DECISIONS.md`
+- Checks: `checks/`, run with `uv run pytest checks`; experiment log: `experiments/LOG.md`
+- Tracker: GitHub Issues on `HeldDerTierwelt/DataBakery` with labels `analysis-plan`, `experiment`, `ready-for-agent`
+- Data: sales, weather and Kiel Week CSVs loaded from `https://raw.githubusercontent.com/opencampus-sh/intro-to-data-science-and-ml/main/data/bakery/` (`umsatzdaten_gekuerzt.csv`, `wetter.csv`, `kiwo.csv`). Raw data is read-only.
