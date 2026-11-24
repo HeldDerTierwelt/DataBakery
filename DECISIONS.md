@@ -11,6 +11,42 @@ Newest first. One entry per decision taken at a stop point.
 **Decided by:** <names>
 -->
 
+## 2026-11-22: Kiel Week days not used as H3 comparison days
+**Canvas block:** 2
+**Decision:** For the holiday ratio, Kiel Week days are excluded from the comparison days, like other holidays and special days.
+**Reason:** Whit Monday is sometimes 2–4 weeks before Kiel Week. Kiel Week days sell more, so they would raise the "usual" level and make the holiday effect look smaller.
+**Alternatives considered:** Keeping Kiel Week days as comparison days (simpler, but biases the ratio downwards around Whit Monday).
+**Decided by:** team (HeldDerTierwelt), proposed by the agent during the H3 analysis
+
+## 2026-11-22: Public holidays from the `holidays` package
+**Canvas block:** 5, 7
+**Decision:** Public holidays for Schleswig-Holstein are loaded from the Python package `holidays` (`holidays.Germany(subdiv="SH")`, added with `uv add holidays`, version 0.109 pinned in `uv.lock`). In the notebook, the list is checked against the sales data (46 public holidays, 20 open, 26 closed). Special days are defined by the team (fixed dates and Easter date), because no holiday source lists them.
+**Reason:** The team wants a reliable, documented source instead of a self-made calculation. The package is open source, widely used, maintained, knows historical changes per state, runs offline and is pinned for everyone. Checked: it gives exactly the same 46 dates as the independent calculation.
+**Alternatives considered:** OpenHolidays API (no data for SH before 2020). feiertage-api.de (works, but a private hobby project, needs internet on every run, not versioned). Own calculation (no external confirmation).
+**Decided by:** team (HeldDerTierwelt)
+
+## 2026-11-22: H3 means open public holidays
+**Canvas block:** 2
+**Decision:** H3 is tested as "revenue is higher on public holidays (Schleswig-Holstein) on which the shop is open than on the same weekday without a holiday". Open public holidays: Easter Monday, Ascension Day, Whit Monday, German Unity Day (5 each, Whit Monday 2018 closed) and 1 May 2016. Easter Sunday, Whit Sunday, Christmas Eve and New Year's Eve are analysed as a separate category, "special days". School holidays are not part of H3; they may be tried later as a model feature.
+**Reason:** A check of the raw sales showed that the shop is open on 20 of the 46 public holidays in the sales period, always on the same holidays, with revenue mostly 1.2–1.9× a normal day with the same weekday. The baseline (D−7) misses single days like these, so the effect matters most for the forecast. The dates come from the `holidays` package (see the entry "Public holidays from the `holidays` package").
+**Alternatives considered:** School holidays (more days, but the D−7 baseline already absorbs a several-week effect, and summer holidays cannot be separated from the high season; needs an external source). Both together.
+**Limit:** only 17 open holidays in the training period and 3 in the validation year (4 per holiday), so the result is a tendency, not proof.
+**Decided by:** team (HeldDerTierwelt)
+
+## 2026-11-22: How H3 is tested
+**Canvas block:** 2, 3, 4, 6
+**Decision:**
+- Comparison: each open holiday against the median revenue of the same group on the same weekday in the 4 weeks before and after, other holidays and special days excluded (holiday ratio). Additionally the D−7 baseline error on these days.
+- Supported for a group if the median holiday ratio is ≥ 1.10 and revenue was higher on at least 13 of 17 training holidays; range always reported, Wilcoxon test only as an extra.
+- Reported pooled **and** per holiday, each per group, because the holidays differ (Easter/Whit Monday are outing days, German Unity Day is in autumn). Per holiday: values only, no yes/no (4 cases).
+- Special days (Easter Sunday, Whit Sunday, Christmas Eve, New Year's Eve) as a separate table in the same notebook.
+- Training period only (17 holidays); validation year untouched.
+- Days around holidays are not part of H3 (open question).
+- Manager gets one sentence per group in the memo; technical reader the notebook.
+**Reason:** The ±4-week same-weekday window controls for weekday and season. 10 % is a difference that would change the baking amount. With 17 cases a test says little.
+**Alternatives considered:** Same weekday over the whole training period (mixes seasons). D−7 only (one random day). Test-based criterion (p < 0.05). Pooled only (hides differences between holidays).
+**Decided by:** team (HeldDerTierwelt), during /grill-question
+
 ## 2026-11-22: Three hypotheses for Question B
 **Canvas block:** 2
 **Decision:** Test H1 (all groups sell more on weekends), H2 (higher sales and more sold-out days during Kiel Week) and H3 (higher sales on holidays).

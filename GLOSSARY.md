@@ -24,6 +24,9 @@ One entry per term, variable or code the project uses. Keep the canonical name, 
 | `Windgeschwindigkeit` | Wind speed, daily mean | m/s per documentation | Values 3–35, high for m/s; the unit is uncertain. |
 | `Wettercode` | WMO present-weather code of the day | code 00–99 (e.g. 61 = slight continuous rain) | Missing on 669 days. Missing mostly on clear, warm days, so "no notable weather", not random. |
 | `KielerWoche` | 1 on a Kiel Week day | 0/1 | The file lists only Kiel Week days. After joining, missing values = 0. 9 days per year. |
+| Open public holiday | A public holiday in Schleswig-Holstein on which the branch has sales | date | Easter Monday, Ascension Day, Whit Monday, German Unity Day (each 5×, Whit Monday 2018 closed), 1 May 2016. 17 in training, 3 in validation. Used for H3. |
+| Special day | Open days with a holiday character that are not public holidays (or fall on a Sunday) | date | Easter Sunday, Whit Sunday, Christmas Eve, New Year's Eve. Analysed separately from H3. |
+| Holiday ratio | Revenue of a group on a holiday ÷ median revenue of the same group on the same weekday in the 4 weeks before and after (holidays and special days excluded) | ratio (1.10 = 10 % more) | Descriptive only: uses weeks after the holiday, so never a model feature. |
 | Closed day | A date with no sales row for any group | – | 38 in the sales period: 26 public holidays, 12 other days. |
 | Test period | The course's held-back year 2018-08-01 – 2019-07-31 (Kaggle) | dates | Used **once**, for the final estimate. |
 | Current practice (assumed) | Bake what sold on the same weekday last week | – | Assumption until the client confirms. Candidate baseline. |

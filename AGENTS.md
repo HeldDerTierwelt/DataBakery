@@ -11,6 +11,7 @@ Responsibilites (tbd)
 
 - Sales, weather and Kiel Week data: see the [dataset documentation](https://github.com/opencampus-sh/intro-to-data-science-and-ml/blob/main/data/bakery/README.md). Load the files from `https://raw.githubusercontent.com/opencampus-sh/intro-to-data-science-and-ml/main/data/bakery/`.
 - Additional data sources: [list them with link and the variables created from them]
+  - Public holidays in Schleswig-Holstein: Python package [`holidays`](https://github.com/vacanza/holidays) (`holidays.Germany(subdiv="SH")`, version pinned in `uv.lock`). Special days (Easter Sunday, Whit Sunday, Christmas Eve, New Year's Eve) are not public holidays and are defined by the team from fixed dates and the Easter date. Variables: holiday category (open public holiday / special day / normal day). Plan: `docs/h3-holidays-plan.md`.
 
 ## Conventions
 

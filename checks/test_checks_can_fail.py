@@ -85,3 +85,22 @@ def test_k6_catches_test_year_date(joined):
     train, val = prep.split(broken)
     with pytest.raises(AssertionError):
         inv.check_split(train, val, broken)
+
+
+def test_k13_catches_missing_holiday(sales):
+    import bakery_holidays as hol
+    public_holidays = hol.public_holidays_sh(inv.FIRST_DATE, inv.LAST_DATE)
+    # pretend the source forgot Ascension Day 2015
+    broken = public_holidays[public_holidays["Datum"] != pd.Timestamp("2015-05-14")]
+    with pytest.raises(AssertionError):
+        inv.check_public_holidays(broken, sales)
+
+
+def test_k13_catches_wrong_holiday_date(sales):
+    import bakery_holidays as hol
+    public_holidays = hol.public_holidays_sh(inv.FIRST_DATE, inv.LAST_DATE)
+    # pretend the source puts German Unity Day 2016 one day late (an ordinary open day)
+    broken = public_holidays.copy()
+    broken.loc[broken["Datum"] == pd.Timestamp("2016-10-03"), "Datum"] = pd.Timestamp("2016-10-04")
+    with pytest.raises(AssertionError):
+        inv.check_public_holidays(broken, sales)

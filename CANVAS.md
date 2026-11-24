@@ -27,7 +27,7 @@
   Hypotheses to test (chosen by the team, 2026-11-22):
   - **H1 (weekend):** All product groups sell more on weekends (Sat, Sun) than on weekdays (Mon–Fri).
   - **H2 (Kiel Week):** Sales are higher during Kiel Week, and there are more sold-out days. *Note:* only the revenue part can be tested. Sold-out days cannot be seen in the data (see C), and there are only 5 Kiel Weeks.
-  - **H3 (holidays):** Sales are higher on holidays. *Still to be made precise:* the bakery is closed on most public holidays (26 of the 38 closed days), so this has to mean school holidays, or the days just before and after a public holiday.
+  - **H3 (holidays):** Per product group, revenue is higher on public holidays (Schleswig-Holstein) on which the shop is open (20 of 46; 17 in training) than on the same weekday without a holiday. Special days (Easter/Whit Sunday, Christmas Eve, New Year's Eve) separately; school holidays not part of H3. *Limit:* only 4 cases per holiday. Plan: [docs/h3-holidays-plan.md](docs/h3-holidays-plan.md).
 - **C (sold out):** On which days did a group probably sell out, so that more could have been sold? Answered only from the sales data. No sold-out records exist and none will be collected. /explore-data found **no detectable sell-out pattern** (no ceiling in revenue). The answer is reported as that limit, plus, once a model exists, a list of days with revenue far below the forecast, each labelled "possible sell-out or low demand – not distinguishable".
 
 **What the data cannot answer:** real demand on sold-out days (sales are capped by what was baked), sold-out days themselves, waste/leftovers, the effect of prices or new products, local events other than Kiel Week, other branches. Patterns around Christmas, Kiel Week and the seasonal-bread season rest on only 5 cases each.
@@ -44,6 +44,7 @@
 - **Baseline:** "same weekday last week" (revenue on D−7, per group).
 - **Good enough to act on:** overall MAPE at least 10% lower than the baseline (relative), **and** lower MAPE than the baseline in each of groups 1 Bread, 2 Rolls, 5 Cakes.
 - **Error cost:** treated as symmetric for now. Whether running out is worse than leftovers is an open question for the client.
+- **H3** counts as supported for a group at a median holiday ratio ≥ 1.10 on at least 13 of 17 training holidays (details in the plan).
 - **Split (by time):** train 2013-07-01 – 2017-07-31; validation 2017-08-01 – 2018-07-31. The course's held-back period after 2018-07-31 is used once, at the end.
 - **Segments reported separately:** product group; weekday (Mon–Sun); December/holidays; Kiel Week; summer vs. winter. The validation year holds only one Christmas and one Kiel Week, so segment results there are single cases.
 
@@ -59,6 +60,7 @@ Details: [docs/data-fact-sheet.md](docs/data-fact-sheet.md). Source: meteolytix 
 - **Peaks:** Cakes on 31 Dec (about 6× the median), Bread before Easter, the day after a 3-day closure (2014-05-05). Revenue level fell about 17% from 2014 to 2016.
 - **Weather:** 2012-01-01 – 2019-08-01, one row per date. 3 sales dates have no weather row. `Bewoelkung` missing on 10 days (2017-10-30 – 11-08). `Wettercode` missing on 669 days, mostly on clear, warm days, so not random. Wind speed unit unclear.
 - **Kiel Week:** 9 days per year. 5 Kiel Weeks (2014–2018) fall in the sales period.
+- **Public holidays (SH):** from the Python package `holidays` (pinned in `uv.lock`). 46 in the sales period: 20 open, 26 closed.
 - **Joins** on `Datum` (left) keep 9,334 rows.
 - **Sell-out signal:** none visible (no ceiling in revenue). See fact sheet §1.
 
@@ -89,7 +91,7 @@ See `DECISIONS.md` (2026-11-22, /explore-data).
 ### 8. Checks 🤖
 <!-- Checkpoints and the invariants that must hold at each (row counts, keys, date ranges, IDs, baseline). Link checks/. -->
 Run with `uv run pytest checks`. Confirmed by the team on 2026-11-22.
-**Status (2026-11-22):** K1–K6 implemented and passing: [checks/invariants.py](checks/invariants.py) holds the checks, [checks/test_data_loads.py](checks/test_data_loads.py) and [checks/test_prepare.py](checks/test_prepare.py) run them on the real data, and [checks/test_checks_can_fail.py](checks/test_checks_can_fail.py) proves each one fails on deliberately broken data. They test the pipeline steps in [src/bakery_prep.py](src/bakery_prep.py). K7–K12 are still to be written, once features, baseline and model exist.
+**Status (2026-11-22):** K1–K6 implemented and passing: [checks/invariants.py](checks/invariants.py) holds the checks, [checks/test_data_loads.py](checks/test_data_loads.py) and [checks/test_prepare.py](checks/test_prepare.py) run them on the real data, and [checks/test_checks_can_fail.py](checks/test_checks_can_fail.py) proves each one fails on deliberately broken data. They test the pipeline steps in [src/bakery_prep.py](src/bakery_prep.py). K7–K12 are still to be written, once features, baseline and model exist. K13 (added 2026-11-22 for H3) is implemented and passing: [checks/test_holidays.py](checks/test_holidays.py), with the holiday code in [src/bakery_holidays.py](src/bakery_holidays.py).
 
 | # | Checkpoint | Invariant |
 |---|---|---|
@@ -105,6 +107,7 @@ Run with `uv run pytest checks`. Confirmed by the team on 2026-11-22.
 | K10 | baseline | covers every evaluated row; its MAPE matches `experiments/LOG.md` |
 | K11 | model inputs | `id` not among the features |
 | K12 | outputs | weekdays ordered Monday → Sunday |
+| K13 | public holidays (`holidays` package) | 46 public holidays (SH) in the sales period; exactly the 20 known ones have sales; the other 26 are all known closed days |
 
 ---
 
@@ -115,6 +118,7 @@ Run with `uv run pytest checks`. Confirmed by the team on 2026-11-22.
 
 ### 10. Findings 🤖
 <!-- What we learned, how sure we are, and what the data cannot tell. -->
+- **H3 (2026-11-22): supported for rolls, croissants, confectionery and cakes; contradicted for bread.** On open public holidays, compared with the same weekday in the 4 weeks around, typical revenue was rolls +78 %, croissants +90 %, confectionery +98 %, cakes +33 %, bread −41 % (15–17 of 17 training holidays point the same way per group). The D−7 baseline misses on these days by 26–49 % too low (bread: about 1.8× too high). *How sure:* direction clear, size uncertain (17 days, 4 per holiday, almost all Mondays/Thursdays; weekend holidays showed a much smaller effect). Sell-outs unknown. Special days: New Year's Eve cakes about 7×. Details: [Alexander-Holidays.ipynb](1_DatasetCharacteristics/Alexander-Holidays.ipynb).
 
 ### 11. Recommendation 👤
 <!-- What the decision-maker should do, under which conditions. Signed off by the team. -->
@@ -130,6 +134,9 @@ Run with `uv run pytest checks`. Confirmed by the team on 2026-11-22.
 - Currency of `Umsatz` (assumed €). **Client** (via team).
 - Why does confectionery peak on some February Sundays (2014-02-09, 2014-02-23, 2015-02-22, 2016-02-21)? **Client** (via team).
 - Confectionery (4) has no entry on 53 days. They are mostly busy days (December, next to closures, 2013–2015) and fade out by 2016. Was it not offered, or not recorded? **Client** (via team). Handling in the data: Q2 of /explore-data.
+
+- Do the days around public holidays (e.g. the day before Good Friday, the day after Easter Monday) sell differently? Not part of H3; possible own hypothesis. **Team**.
+- Idea from the H3 analysis: does an open holiday sell like a Sunday (quick check: only 6–18 % above nearby Sundays)? Could become a simple model feature. See [docs/h3-holidays-plan.md](docs/h3-holidays-plan.md), "Ideas for later". **Team**.
 
 ## Decision log
 See `DECISIONS.md`.

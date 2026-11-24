@@ -1,4 +1,4 @@
-"""Check functions K1-K6 (canvas block 8).
+"""Check functions K1-K6 and K13 (canvas block 8).
 
 Each function compares pipeline output with an independent source of truth
 (the raw file, the calendar, a fixed list from the data fact sheet, or the
@@ -131,3 +131,39 @@ def check_split(train: pd.DataFrame, val: pd.DataFrame, data: pd.DataFrame) -> N
     )
     overlap = set(train["Datum"]) & set(val["Datum"])
     assert not overlap, f"{len(overlap)} dates are in both training and validation"
+
+
+# --- K13: public holidays from the `holidays` package --------------------------
+
+# The 20 public holidays with sales (shop open), written out from the check of
+# 2026-11-22 (docs/h3-holidays-plan.md). Easter Monday, Ascension Day, Whit Monday,
+# German Unity Day, and 1 May 2016.
+OPEN_HOLIDAYS = pd.to_datetime([
+    "2013-10-03", "2014-04-21", "2014-05-29", "2014-06-09", "2014-10-03",
+    "2015-04-06", "2015-05-14", "2015-05-25", "2015-10-03", "2016-03-28",
+    "2016-05-01", "2016-05-05", "2016-05-16", "2016-10-03", "2017-04-17",
+    "2017-05-25", "2017-06-05", "2017-10-03", "2018-04-02", "2018-05-10",
+])
+PUBLIC_HOLIDAYS_IN_PERIOD = 46
+
+
+def check_public_holidays(public_holidays: pd.DataFrame, sales: pd.DataFrame) -> None:
+    dates = pd.DatetimeIndex(sorted(public_holidays["Datum"]))
+    assert len(dates) == PUBLIC_HOLIDAYS_IN_PERIOD, (
+        f"{len(dates)} public holidays in the sales period, expected {PUBLIC_HOLIDAYS_IN_PERIOD}"
+    )
+    assert dates.min() >= FIRST_DATE and dates.max() <= LAST_DATE, "Public holidays outside the sales period"
+
+    sales_dates = set(sales["Datum"])
+    open_dates = pd.DatetimeIndex([d for d in dates if d in sales_dates])
+    closed_dates = pd.DatetimeIndex([d for d in dates if d not in sales_dates])
+    assert open_dates.equals(OPEN_HOLIDAYS), (
+        f"Open public holidays differ from the 20 known ones. "
+        f"Unexpected: {[d.date() for d in open_dates.difference(OPEN_HOLIDAYS)]}; "
+        f"missing: {[d.date() for d in OPEN_HOLIDAYS.difference(open_dates)]}"
+    )
+    not_known_closed = closed_dates.difference(CLOSED_DAYS)
+    assert len(not_known_closed) == 0, (
+        f"Public holidays without sales that are not known closed days: {[d.date() for d in not_known_closed]}"
+    )
+    assert len(closed_dates) == 26, f"{len(closed_dates)} closed public holidays, expected 26"
