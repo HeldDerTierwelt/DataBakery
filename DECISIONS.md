@@ -11,6 +11,43 @@ Newest first. One entry per decision taken at a stop point.
 **Decided by:** <names>
 -->
 
+## 2026-11-27: Holiday feature with four day types
+**Canvas block:** 6, 7
+**Decision:** The holiday feature has five values: **normal day** (reference, no column of its own) and four day types:
+1. **Open public holiday:** Easter Monday, Ascension Day, Whit Monday, German Unity Day, 1 May, Reformation Day (every public holiday except Good Friday, see "Definition of an open public holiday"). 17 days in training, 3 in validation.
+2. **Easter/Whit Sunday:** 8 / 2.
+3. **Christmas Eve (24 Dec):** 4 / 1.
+4. **New Year's Eve (31 Dec):** 4 / 1.
+Each day type is one-hot encoded and combined with the product group (interaction): a column is 1 only on that day type and in that group. There are only interaction columns, no extra main column per day type (it would be the sum of the interaction columns). Combinations without any case are left out (e.g. seasonal bread on open public holidays). That gives up to 22 columns.
+This replaces the three-value category (normal / open public holiday / special day) in "Holiday feature owned by HeldDerTierwelt".
+**Reason:** Holiday ratio in the training period (same weekday, 4 weeks before and after; median):
+- Open public holidays and special days differ, for bread even in direction (0.59 vs. 1.85).
+- The open public holidays look alike: bread about 0.5–0.75, sweet groups clearly above.
+- The special days differ among themselves: Easter/Whit Sunday mild (1.06–1.44), Christmas Eve strong for bread and rolls (1.88 / 1.64), New Year's Eve cakes 7.3× and confectionery 0.58.
+**Alternatives considered:** Three values (hides the differences between special days). One column per holiday (4–5 cases each for open public holidays that look alike, so mostly noise). Treating a weekday holiday as a Sunday (more economical, possible later experiment). Ridge regression if the coefficients swing too much (later experiment).
+**Limit:** Christmas Eve and New Year's Eve rest on 4 training days each, and validation has 1 case each, so they can only be checked together with the other special days. In validation (2017) both fall on a Sunday, which never happens in training; in the test year both are Mondays. The split was set on training data and is not changed after looking at validation results.
+**Decided by:** HeldDerTierwelt (analysis by the agent)
+
+## 2026-11-26: Definition of an open public holiday (law + sales data)
+**Canvas block:** 6, 7
+**Decision:**
+- **Law:** public holidays come from the `holidays` package (`holidays.Germany(subdiv="SH")`). The Ladenöffnungszeitengesetz Schleswig-Holstein (LÖffZG) closes shops on Sundays and public holidays (§ 3 Abs. 2 Nr. 1). § 4 Abs. 1 makes an exception for shops that mainly sell Back- und Konditorwaren: they may open on Sundays and public holidays for five hours, "allerdings nicht am Karfreitag". On a weekday, 24 December closes from 14:00 (§ 3 Abs. 2 Nr. 2); that shortens the day but does not close it.
+- **Definition:** every public holiday in Schleswig-Holstein **except Good Friday** is a day on which the bakery may legally open, so it counts as an **open public holiday** for now. Good Friday is always closed by law. Other closures (e.g. Christmas, New Year) are the bakery's own choice, and the bakery knows them in advance.
+- **Training and validation data:** a date without any sales means the bakery was closed. It is not plausible that an open bakery sold nothing at all. These dates are not predicted (entry "Closed days not predicted", 2026-11-22).
+- **Feature:** the holiday category is built from the calendar alone (date → public holiday / special day / normal day), never from the sales. On every row that exists, a public holiday is then an open public holiday.
+**Reason:** The feature should rest on a rule that is known in advance and does not use the target. Before, the H3 notebook marked a holiday as "open" by checking whether it had sales. That is fine for the analysis, but as a feature it would use information about the target.
+**Consequence:** in the sales period the bakery was open on 20 of 46 public holidays. Of the 26 closed ones, only Good Friday is closed by law; the rest were the bakery's own choice. In the test year, Reformation Day (2018-10-31, a public holiday in SH since 2018) counts as open. It was closed in 2017, so whether it has rows is visible in `test.csv`.
+**Limit:** the law text was read in its 2026 version (umwelt-online, gesetze.co), not on the official portal. Whether § 4 read the same in 2013–2019 is unchecked. §§ 9 ff. (e.g. rules for resort towns) were not read.
+**Decided by:** HeldDerTierwelt (law research by the agent)
+
+## 2026-11-26: Holiday feature owned by HeldDerTierwelt
+**Canvas block:** 6
+**Decision:** HeldDerTierwelt builds the holiday feature: one holiday category per date (normal day / open public holiday / special day), from [src/bakery_holidays.py](src/bakery_holidays.py), one-hot encoded and combined with the product group (interaction). The feature is listed as known in advance in canvas block 6.
+**Reason:** H3 showed a strong effect that differs by product group (rolls +78 %, confectionery +98 %, bread −41 %), and the D−7 baseline misses on these days by 26–49 %. The H3 analysis and the holiday code come from the same team member. Proposal **A** in [docs/feature-candidates.md](docs/feature-candidates.md).
+**Alternatives considered:** another feature from the candidate list.
+**Open:** whether the feature goes into the baseline model is decided by the team. Days around holidays and bridge days are possible extensions (proposal B).
+**Decided by:** HeldDerTierwelt
+
 ## 2026-11-24: Weather gaps filled and flagged
 **Canvas block:** 7
 **Decision:** Replaces "Weather gaps dropped" (2026-11-22). Rows with missing cloud cover, temperature or wind are **kept**. A missing value is filled with the mean of the same calendar month in the training period (one value per date, dates before 2017-08-01). The new column `Wetter_fehlt` = 1 marks the 12 dates (70 rows) where at least one value was filled. Measured values are never changed. The weather code is still grouped into classes, with "missing" as its own class.

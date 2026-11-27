@@ -70,6 +70,7 @@ Details: [docs/data-fact-sheet.md](docs/data-fact-sheet.md). Source: meteolytix 
 - **Sales history:** complete up to **D−2** only. Every lag or rolling feature uses data up to D−2 at the latest. D−1 (today) is incomplete, so it is never used. The baseline (D−7) is allowed.
 - **Weather for D:** only a forecast exists at that moment. Observed weather serves as a stand-in for the forecast, so results with weather are **somewhat optimistic**. One model run without weather shows how much weather contributes.
 - **Calendar:** weekday, month, public and school holidays (Schleswig-Holstein), Kiel Week dates. All are known months ahead.
+  - **Holiday day type** (normal day / open public holiday / Easter-Whit Sunday / Christmas Eve / New Year's Eve): built from the `holidays` package and fixed dates. Fixed years ahead, so no leakage. Built from the calendar only, never from sales. By law (LÖffZG SH § 4) the bakery may open on every public holiday except Good Friday, so all of them count as open; the bakery knows its own closures in advance. In the data, a date without sales means closed. Owner: HeldDerTierwelt (DECISIONS 2026-11-26).
 - **Not known:** sales of any group on D or D−1; observed weather on D (only as a stand-in, see above); sell-out status.
 
 ### 7. Data decisions 👤
@@ -81,6 +82,7 @@ See `DECISIONS.md` (2026-11-22, /explore-data).
 - **Seasonal bread:** predicted only on days it is on offer (the season start is set by the manager). In-season gaps are handled like confectionery gaps.
 - **Baseline fallback:** D−7 → D−14 → D−21 → median of the group's previous season. Model and baseline are scored on identical rows.
 - **Missing weather:** rows are **kept**. Missing cloud cover, temperature or wind is filled with the training mean of the same calendar month; `Wetter_fehlt` = 1 flags the 12 dates (70 rows; 64 in the validation year). The same rule fills the 13 dates without weather in the test year. Decision 2026-11-24 (replaces the drop of 2026-11-22).
+- **Holiday day type:** four day types (open public holiday, Easter/Whit Sunday, Christmas Eve, New Year's Eve) plus normal day as reference; one-hot and combined with the product group (interaction). Built from the calendar only. DECISIONS 2026-11-27.
 - **Weather code:** grouped into a few classes; "missing" becomes its own class, "no notable weather". The class scheme is set at feature building.
 - **Peaks** (31 Dec, Easter, day after a closure, February Sundays): kept as real demand, to be explained with calendar features.
 - **Revenue drop 2014→2016:** all years kept with a time-trend feature; training from 2016 onward is run as one comparison experiment.
