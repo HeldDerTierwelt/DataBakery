@@ -14,9 +14,9 @@ DATA_URL = "https://raw.githubusercontent.com/opencampus-sh/intro-to-data-scienc
 VALIDATION_START = pd.Timestamp("2017-08-01")
 VALIDATION_END = pd.Timestamp("2018-07-31")
 
-# Weather columns that must be present on a day; days without them are dropped
-# (DECISIONS.md, "Weather gaps dropped"). `Wettercode` is not in this list:
-# a missing code means "no notable weather" and becomes its own class.
+# Weather columns that are filled where missing, with the flag `Wetter_fehlt`
+# (DECISIONS.md, "Weather gaps filled and flagged"). `Wettercode` is not in this
+# list: a missing code means "no notable weather" and becomes its own class.
 WEATHER_REQUIRED = ["Bewoelkung", "Temperatur", "Windgeschwindigkeit"]
 
 
@@ -45,13 +45,31 @@ def join(sales: pd.DataFrame, weather: pd.DataFrame, kiwo: pd.DataFrame) -> pd.D
     return data
 
 
-def drop_weather_gaps(data: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Remove rows whose date has no required weather value.
+def weather_fill_values(data: pd.DataFrame) -> pd.DataFrame:
+    """Mean of each required weather column per calendar month (1-12).
 
-    Returns (kept rows, removed rows), so the removal can be reported and checked.
+    Uses the training period only (dates before VALIDATION_START), one value per
+    date, so the validation and test years never influence the fill values.
     """
-    gap = data[WEATHER_REQUIRED].isna().any(axis=1)
-    return data[~gap].copy(), data[gap].copy()
+    days = (data.loc[data["Datum"] < VALIDATION_START, ["Datum", *WEATHER_REQUIRED]]
+                .drop_duplicates("Datum"))
+    return days.groupby(days["Datum"].dt.month)[WEATHER_REQUIRED].mean()
+
+
+def fill_weather_gaps(data: pd.DataFrame, fill_values: pd.DataFrame) -> pd.DataFrame:
+    """Fill missing required weather values and flag the affected rows.
+
+    A missing value gets the training mean of its calendar month (from
+    `weather_fill_values`). The new column `Wetter_fehlt` is 1 on rows where at
+    least one required weather value was missing, else 0. Values that were
+    measured are never changed, and no row is removed.
+    """
+    out = data.copy()
+    out["Wetter_fehlt"] = out[WEATHER_REQUIRED].isna().any(axis=1).astype(int)
+    month = out["Datum"].dt.month
+    for col in WEATHER_REQUIRED:
+        out[col] = out[col].fillna(month.map(fill_values[col]))
+    return out
 
 
 def split(data: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:

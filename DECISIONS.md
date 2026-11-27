@@ -11,6 +11,15 @@ Newest first. One entry per decision taken at a stop point.
 **Decided by:** <names>
 -->
 
+## 2026-11-24: Weather gaps filled and flagged
+**Canvas block:** 7
+**Decision:** Replaces "Weather gaps dropped" (2026-11-22). Rows with missing cloud cover, temperature or wind are **kept**. A missing value is filled with the mean of the same calendar month in the training period (one value per date, dates before 2017-08-01). The new column `Wetter_fehlt` = 1 marks the 12 dates (70 rows) where at least one value was filled. Measured values are never changed. The weather code is still grouped into classes, with "missing" as its own class.
+**Reason:** Dropping whole sales rows because of a weather gap is too harsh: validation lost 3.5 % of its rows, including the first 9 days of the 2017 seasonal-bread season. The course's test year has 13 dates without weather, and those days need a forecast too. Runs with and without weather can now be scored on the same, complete rows.
+**Alternatives considered:** Dropping the rows (the old decision). Turning the weather values into classes with "unknown" as one class (loses detail such as 20 °C vs. 25 °C). Filling from neighbouring days.
+**Limit:** in training, weather is missing on one date only (2016-12-11, 6 rows), so a model learns almost nothing about `Wetter_fehlt`. Filling with training means is checked for leakage (K5).
+**Consequence:** the prepared data has 9,334 rows (before: 9,264). H3 results unchanged; H1 numbers shift by at most 0.4 percentage points.
+**Decided by:** HeldDerTierwelt (proposed by the agent), to be confirmed by the team
+
 ## 2026-11-22: Kiel Week days not used as H3 comparison days
 **Canvas block:** 2
 **Decision:** For the holiday ratio, Kiel Week days are excluded from the comparison days, like other holidays and special days.
@@ -84,6 +93,7 @@ Newest first. One entry per decision taken at a stop point.
 **Decided by:** team (HeldDerTierwelt), during /explore-data
 
 ## 2026-11-22: Weather gaps dropped, weather code grouped
+**Superseded** on 2026-11-24 by "Weather gaps filled and flagged".
 **Canvas block:** 7
 **Decision:** Days with a missing weather row (2016-12-11, 2017-10-04, 2017-10-05) or missing cloud cover (2017-10-30 – 11-08) are dropped: 12 dates, 70 rows, 64 of them in the validation year. The weather code is grouped into a few classes, with "missing" as its own class, "no notable weather".
 **Reason:** The team prefers no invented weather values. A missing code means calm, clear weather (mean cloud 3.3 vs 5.3), so it carries information.

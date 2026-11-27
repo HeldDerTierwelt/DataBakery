@@ -22,6 +22,7 @@ One entry per term, variable or code the project uses. Keep the canonical name, 
 | `Bewoelkung` | Cloud cover, daily mean | octas, 0 (clear) – 8 (overcast) | Missing on 10 days (2017-10-30 – 11-08). Observed, not forecast. |
 | `Temperatur` | Temperature, daily mean | °C | No missing values. Observed, not forecast. |
 | `Windgeschwindigkeit` | Wind speed, daily mean | m/s per documentation | Values 3–35, high for m/s; the unit is uncertain. |
+| `Wetter_fehlt` | Flag: at least one of cloud cover, temperature or wind was missing and filled with the training mean of the calendar month | 0 / 1 | 1 on 12 dates (70 rows) in the sales period. Created in data preparation, not in the raw data. |
 | `Wettercode` | WMO present-weather code of the day | code 00–99 (e.g. 61 = slight continuous rain) | Missing on 669 days. Missing mostly on clear, warm days, so "no notable weather", not random. |
 | `KielerWoche` | 1 on a Kiel Week day | 0/1 | The file lists only Kiel Week days. After joining, missing values = 0. 9 days per year. |
 | Open public holiday | A public holiday in Schleswig-Holstein on which the branch has sales | date | Easter Monday, Ascension Day, Whit Monday, German Unity Day (each 5×, Whit Monday 2018 closed), 1 May 2016. 17 in training, 3 in validation. Used for H3. |

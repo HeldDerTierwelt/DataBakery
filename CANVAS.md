@@ -80,7 +80,7 @@ See `DECISIONS.md` (2026-11-22, /explore-data).
 - **Confectionery gaps (53 open days):** treated as "not offered". The rows are left out of training and evaluation, never filled with 0.
 - **Seasonal bread:** predicted only on days it is on offer (the season start is set by the manager). In-season gaps are handled like confectionery gaps.
 - **Baseline fallback:** D−7 → D−14 → D−21 → median of the group's previous season. Model and baseline are scored on identical rows.
-- **Missing weather:** days with a missing weather row or missing cloud cover are **dropped** (12 dates, 70 rows; 64 of them in the validation year, including the first 9 days of the 2017 seasonal-bread season).
+- **Missing weather:** rows are **kept**. Missing cloud cover, temperature or wind is filled with the training mean of the same calendar month; `Wetter_fehlt` = 1 flags the 12 dates (70 rows; 64 in the validation year). The same rule fills the 13 dates without weather in the test year. Decision 2026-11-24 (replaces the drop of 2026-11-22).
 - **Weather code:** grouped into a few classes; "missing" becomes its own class, "no notable weather". The class scheme is set at feature building.
 - **Peaks** (31 Dec, Easter, day after a closure, February Sundays): kept as real demand, to be explained with calendar features.
 - **Revenue drop 2014→2016:** all years kept with a time-trend feature; training from 2016 onward is run as one comparison experiment.
@@ -99,7 +99,7 @@ Run with `uv run pytest checks`. Confirmed by the team on 2026-11-22.
 | K2 | raw sales | `Umsatz` > 0, never missing |
 | K3 | raw sales | dates 2013-07-01 – 2018-07-31; 1,819 sales dates; exactly the 38 known closed days missing |
 | K4 | after joins | row count unchanged; `KielerWoche` ∈ {0, 1}; 223 rows / 45 dates = 1 |
-| K5 | after weather-gap drop | 12 dates / 70 rows removed; no sales row with missing weather |
+| K5 | after weather-gap fill | no row lost; no missing weather left; exactly the 12 known dates / 70 rows flagged; measured values unchanged; fill values unchanged when post-training weather changes (no leakage) |
 | K6 | split | training < 2017-08-01; validation = 2017-08-01 – 2018-07-31; no test-year date anywhere |
 | K7 | features | no sales-history feature for D uses data newer than D−2 |
 | K8 | prepared data | no added zero-revenue rows (closed days, not-offered days) |

@@ -41,7 +41,7 @@ All weather values are **observed**, not forecast. They serve as a stand-in for 
 | Rain | ⚠️ | only via `Wettercode` (type, no amount). 822 days with a rain/drizzle code | plausible: fewer passers-by | **B**. Group the codes into classes. A missing code means "no notable weather" and gets its own class (DECISIONS) |
 | Snowfall | ⚠️ | `Wettercode`: 57 days with a snow code | plausible, but rare | **B**, as a class in the same weather-code feature |
 | Frost | ⚠️ | only the daily mean, no daily minimum. 63 days with a mean < 0 °C | overlaps strongly with temperature and winter | **B, low priority**. Only helps if frost does more than "cold" |
-| Sunshine | ⚠️ | no sunshine hours, only `Bewoelkung` (cloud cover, 0–8 octas) as a stand-in. 451 days with ≤ 2 octas. 10 missing days in the validation year | plausible | **B**, via `Bewoelkung`. The missing days need a rule |
+| Sunshine | ⚠️ | no sunshine hours, only `Bewoelkung` (cloud cover, 0–8 octas) as a stand-in. 451 days with ≤ 2 octas. 10 missing days in the validation year | plausible | **B**, via `Bewoelkung`. Missing days are filled with the training monthly mean and flagged in `Wetter_fehlt` (DECISIONS 2026-11-24) |
 | Wind | ⚠️ | `Windgeschwindigkeit`, median 10, range 3–35. Unit unclear | unclear | **C** |
 | Weather forecast from the day before | ✅ (exactly what is known at 14:00) | we do not have archived forecasts for 2013–2019. Whether freely available ones exist is unchecked | would be the honest version of all weather features | **C**: briefly look for a source. If there is none, it stays a limitation in the report (as decided in the canvas) |
 

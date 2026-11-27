@@ -59,18 +59,43 @@ def test_k4_catches_unfilled_kiel_week(joined, sales):
         inv.check_join(broken, sales)
 
 
-def test_k5_catches_missing_drop(joined):
-    kept, removed = prep.drop_weather_gaps(joined)
-    # pretend one gap day was not dropped
-    leaked = removed[removed["Datum"] == pd.Timestamp("2017-10-04")]
+def _filled(joined):
+    return prep.fill_weather_gaps(joined, prep.weather_fill_values(joined))
+
+
+def test_k5_catches_unflagged_gap(joined):
+    broken = _filled(joined)
+    # pretend one gap day was filled but not flagged
+    broken.loc[broken["Datum"] == pd.Timestamp("2017-10-04"), "Wetter_fehlt"] = 0
     with pytest.raises(AssertionError):
-        inv.check_weather_drop(
-            pd.concat([kept, leaked]), removed.drop(leaked.index), joined
-        )
+        inv.check_weather_fill(broken, joined)
+
+
+def test_k5_catches_changed_measured_value(joined):
+    broken = _filled(joined)
+    # pretend the fill overwrote a measured temperature
+    broken.loc[broken.index[0], "Temperatur"] += 1.0
+    with pytest.raises(AssertionError):
+        inv.check_weather_fill(broken, joined)
+
+
+def test_k5_catches_dropped_rows(joined):
+    filled = _filled(joined)
+    broken = filled[filled["Wetter_fehlt"] == 0]  # the old behaviour: gap days removed
+    with pytest.raises(AssertionError):
+        inv.check_weather_fill(broken, joined)
+
+
+def test_k5_catches_fill_values_from_all_years(joined):
+    def leaky_fill_values(data):
+        days = data[["Datum", *prep.WEATHER_REQUIRED]].drop_duplicates("Datum")
+        return days.groupby(days["Datum"].dt.month)[prep.WEATHER_REQUIRED].mean()
+    with pytest.raises(AssertionError):
+        inv.check_fill_values_training_only(leaky_fill_values, joined)
 
 
 def test_k6_catches_validation_day_in_training(joined):
-    kept, _ = prep.drop_weather_gaps(joined)
+    kept = _filled(joined)
     train, val = prep.split(kept)
     moved = val[val["Datum"] == val["Datum"].min()]
     with pytest.raises(AssertionError):
@@ -78,7 +103,7 @@ def test_k6_catches_validation_day_in_training(joined):
 
 
 def test_k6_catches_test_year_date(joined):
-    kept, _ = prep.drop_weather_gaps(joined)
+    kept = _filled(joined)
     future = kept.iloc[[0]].copy()
     future["Datum"] = pd.Timestamp("2018-08-01")
     broken = pd.concat([kept, future], ignore_index=True)

@@ -28,8 +28,9 @@ CLOSED_DAYS = pd.to_datetime([
     "2018-05-01", "2018-05-21",
 ])
 
-# Sales dates dropped because weather is missing (DECISIONS.md, "Weather gaps dropped").
-# 2017-10-31 is a closed day, so 12 of the 13 weather-gap dates are sales dates.
+# Sales dates with missing weather, filled and flagged (DECISIONS.md, "Weather gaps
+# filled and flagged"). 2017-10-31 is a closed day, so 12 of the 13 weather-gap
+# dates are sales dates.
 WEATHER_GAP_DATES = pd.to_datetime([
     "2016-12-11", "2017-10-04", "2017-10-05",
     "2017-10-30", "2017-11-01", "2017-11-02", "2017-11-03", "2017-11-04",
@@ -100,17 +101,40 @@ def check_join(joined: pd.DataFrame, sales: pd.DataFrame) -> None:
     assert kw["Datum"].nunique() == KIWO_DATES, f"{kw['Datum'].nunique()} Kiel Week dates, expected {KIWO_DATES}"
 
 
-# --- K5: weather-gap drop ------------------------------------------------------
+# --- K5: weather-gap fill ------------------------------------------------------
 
-def check_weather_drop(kept: pd.DataFrame, removed: pd.DataFrame, joined: pd.DataFrame) -> None:
-    assert len(kept) + len(removed) == len(joined), "Rows were lost or added while dropping weather gaps"
-    removed_dates = pd.DatetimeIndex(sorted(removed["Datum"].unique()))
-    assert removed_dates.equals(WEATHER_GAP_DATES), (
-        f"Removed dates differ from the 12 known weather-gap dates: {[d.date() for d in removed_dates]}"
+def check_weather_fill(filled: pd.DataFrame, joined: pd.DataFrame) -> None:
+    assert filled.index.equals(joined.index), (
+        f"Rows were lost or added while filling weather gaps: {len(joined)} -> {len(filled)}"
     )
-    assert len(removed) == WEATHER_GAP_ROWS, f"{len(removed)} rows removed, expected {WEATHER_GAP_ROWS}"
-    left = kept[WEATHER_REQUIRED].isna().sum()
-    assert left.sum() == 0, f"Missing weather left after the drop: {left[left > 0].to_dict()}"
+    left = filled[WEATHER_REQUIRED].isna().sum()
+    assert left.sum() == 0, f"Missing weather left after the fill: {left[left > 0].to_dict()}"
+
+    flagged = filled[filled["Wetter_fehlt"] == 1]
+    flagged_dates = pd.DatetimeIndex(sorted(flagged["Datum"].unique()))
+    assert flagged_dates.equals(WEATHER_GAP_DATES), (
+        f"Flagged dates differ from the 12 known weather-gap dates: {[d.date() for d in flagged_dates]}"
+    )
+    assert len(flagged) == WEATHER_GAP_ROWS, f"{len(flagged)} rows flagged, expected {WEATHER_GAP_ROWS}"
+    assert set(filled["Wetter_fehlt"].unique()) <= {0, 1}, "Wetter_fehlt has values other than 0/1"
+
+    measured = joined[WEATHER_REQUIRED].notna()
+    assert filled[WEATHER_REQUIRED].where(measured).equals(joined[WEATHER_REQUIRED]), (
+        "A measured weather value was changed by the fill"
+    )
+
+
+def check_fill_values_training_only(fill_values_fn, joined: pd.DataFrame) -> None:
+    """Changing the weather after the training period must not change the fill values (no leakage)."""
+    base = fill_values_fn(joined)
+    assert list(base.index) == list(range(1, 13)), f"Fill values not available for all 12 months: {list(base.index)}"
+    assert not base.isna().any().any(), "Fill values contain missing values"
+    shifted = joined.copy()
+    after_training = shifted["Datum"] > LAST_TRAIN_DATE
+    shifted.loc[after_training, WEATHER_REQUIRED] += 100
+    assert fill_values_fn(shifted).equals(base), (
+        "Fill values change when validation weather changes: they use data after the training period"
+    )
 
 
 # --- K6: time split ----------------------------------------------------------
