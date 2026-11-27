@@ -47,6 +47,7 @@
 - **H3** counts as supported for a group at a median holiday ratio ≥ 1.10 on at least 13 of 17 training holidays (details in the plan).
 - **Split (by time):** train 2013-07-01 – 2017-07-31; validation 2017-08-01 – 2018-07-31. The course's held-back period after 2018-07-31 is used once, at the end.
 - **Segments reported separately:** product group; weekday (Mon–Sun); December/holidays; Kiel Week; summer vs. winter. The validation year holds only one Christmas and one Kiel Week, so segment results there are single cases.
+- **Analysis plan:** [issues/plan-databakery.md](issues/plan-databakery.md) (draft v1, 2026-11-27).
 
 ---
 
@@ -72,10 +73,11 @@ Details: [docs/data-fact-sheet.md](docs/data-fact-sheet.md). Source: meteolytix 
 - **Calendar:** weekday, month, public and school holidays (Schleswig-Holstein), Kiel Week dates. All are known months ahead.
   - **Holiday day type** (normal day / open public holiday / Easter-Whit Sunday / Christmas Eve / New Year's Eve): built from the `holidays` package and fixed dates. Fixed years ahead, so no leakage. Built from the calendar only, never from sales. By law (LÖffZG SH § 4) the bakery may open on every public holiday except Good Friday, so all of them count as open; the bakery knows its own closures in advance. In the data, a date without sales means closed. Owner: HeldDerTierwelt (DECISIONS 2026-11-26).
 - **Not known:** sales of any group on D or D−1; observed weather on D (only as a stand-in, see above); sell-out status.
+- Checks K7 and K14 guard this boundary; see the [analysis plan](issues/plan-databakery.md).
 
 ### 7. Data decisions 👤
 <!-- Joins, missing values, encodings, exclusions, each with a reason. Link the entries in DECISIONS.md. -->
-See `DECISIONS.md` (2026-11-22, /explore-data).
+See `DECISIONS.md` (2026-11-22, /explore-data). Summarised in the [analysis plan](issues/plan-databakery.md), section "Data and known in advance".
 - **Joins:** sales ⟕ weather ⟕ Kiel Week on `Datum` (left). `KielerWoche` missing → 0.
 - **Closed days (38 dates without any row):** not predicted and not evaluated. Never added as 0.
 - **Confectionery gaps (53 open days):** treated as "not offered". The rows are left out of training and evaluation, never filled with 0.
@@ -110,6 +112,14 @@ Run with `uv run pytest checks`. Confirmed by the team on 2026-11-22.
 | K11 | model inputs | `id` not among the features |
 | K12 | outputs | weekdays ordered Monday → Sunday |
 | K13 | public holidays (`holidays` package) | 46 public holidays (SH) in the sales period; exactly the 20 known ones have sales; the other 26 are all known closed days |
+| K6b | split | 1,462 training dates and 357 validation dates (calendar days minus known closed days) |
+| K10b | baseline | for a few fixed rows, the baseline equals the revenue on D−7 looked up in the raw file |
+| K14 | holiday feature | the holiday day type depends on the date only: shuffling `Umsatz` leaves it identical |
+| K15 | holiday feature | day types in training 17 / 8 / 4 / 4, in validation 3 / 2 / 1 / 1 (fixed date list); Good Friday never an open public holiday |
+| K16 | holiday feature | interaction columns: at most one 1 per row, only in the row's own group; no column always 0 |
+| K17 | submission | header `id,umsatz`; ids exactly those of the Kaggle test file, none missing or duplicated; all values > 0 |
+
+**Added 2026-11-27** with the [analysis plan](issues/plan-databakery.md): K6b, K10b and K14–K17, confirmed by HeldDerTierwelt, still to be reviewed by the team. Not implemented yet. The checkpoints per pipeline stage, each with its source of truth, are in the plan.
 
 ---
 
