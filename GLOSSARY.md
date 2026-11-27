@@ -6,7 +6,7 @@ One entry per term, variable or code the project uses. Keep the canonical name, 
 |---|---|---|---|
 | `Datum` | Calendar day of the sales record | date (YYYY-MM-DD) | Sales data covers 2013-07-01 to 2018-07-31. 38 calendar days are missing, mostly holidays the branch was closed. |
 | `Warengruppe` | Product group | 1 Bread, 2 Rolls, 3 Croissants, 4 Confectionery, 5 Cakes, 6 Seasonal bread | Group 6 only October–January. Group 4 has no entry on 53 days. |
-| `id` | Row key of the sales data: `YYMMDD` followed by the group digit, e.g. `1307011` = 2013-07-01, group 1 | integer | Unique. The Kaggle test data uses the same format. |
+| `id` | Row key of the sales data: `YYMMDD` followed by the group digit, e.g. `1307011` = 2013-07-01, group 1 | integer | Unique. The Kaggle sample submission shows 9-digit ids (`YYYYMMDD` + group, e.g. `201808011`), not this 7-digit format; check the test file. |
 | `Umsatz` | Revenue of one product group on one day | currency unit, **not stated in the source** (probably €; written "€" in this project) | Revenue, **not** pieces. It measures what was sold, not what customers wanted (see *Sales vs. demand*). |
 | Sales vs. demand | Sales are capped by what was baked. On a sold-out day, real demand was higher than recorded sales. | – | The data does not show sold-out days or leftovers, so demand above the baked amount is invisible. |
 | Possible sell-out day | A day × group whose actual revenue was far below the model's forecast | flag (yes/no) | **Not** an observation: it could equally be low demand. No sold-out records exist. The data shows no sell-out ceiling. The threshold is set once a model exists. |
