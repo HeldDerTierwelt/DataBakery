@@ -75,9 +75,9 @@ Confirmed by HeldDerTierwelt on 2026-11-27; the team still has to review them. S
 |---|---|---|---|
 | K7 | no sales-history feature for D uses data newer than D−2. Test: change revenue on D and D−1, and the feature stays the same | leakage boundary (canvas block 6) | ⏳ |
 | K8 | no added zero-revenue rows (closed days, not-offered days) | K1–K3 | ⏳ |
-| K14 | the holiday day type depends on the date only: shuffling `Umsatz` leaves the column identical | leakage boundary (canvas block 6) | ⏳ |
-| K15 | holiday day types in training 17 / 8 / 4 / 4 and in validation 3 / 2 / 1 / 1 (open public holiday / Easter-Whit Sunday / Christmas Eve / New Year's Eve), as a fixed date list. Good Friday is never an open public holiday | decision log 2026-11-26/27; LÖffZG SH § 4 | ⏳ |
-| K16 | holiday interaction columns: at most one 1 per row, only in the row's own product group; no column that is always 0 | definition of the interaction | ⏳ |
+| K14 | the holiday day type depends on the date only: shuffling `Umsatz` leaves the column identical | leakage boundary (canvas block 6) | ✅ |
+| K15 | holiday day types in training 17 / 8 / 4 / 4 and in validation 3 / 2 / 1 / 1 (open public holiday / Easter-Whit Sunday / Christmas Eve / New Year's Eve), as a fixed date list. Good Friday is never an open public holiday | decision log 2026-11-26/27; LÖffZG SH § 4 | ✅ |
+| K16 | holiday interaction columns: at most one 1 per row, only in the row's own product group; no column that is always 0 | definition of the interaction | ✅ |
 | … | checks for the team's other features | to be added by each feature owner | open |
 
 ### 4. Split

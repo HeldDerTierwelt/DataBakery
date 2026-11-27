@@ -7,6 +7,7 @@ it is meant to catch.
 import pandas as pd
 import pytest
 
+import bakery_holidays as hol
 import bakery_prep as prep
 import invariants as inv
 
@@ -129,3 +130,57 @@ def test_k13_catches_wrong_holiday_date(sales):
     broken.loc[broken["Datum"] == pd.Timestamp("2016-10-03"), "Datum"] = pd.Timestamp("2016-10-04")
     with pytest.raises(AssertionError):
         inv.check_public_holidays(broken, sales)
+
+
+# --- K14-K16: holiday feature -------------------------------------------------
+
+@pytest.fixture(scope="module")
+def prepared(joined):
+    filled = _filled(joined)
+    train, val = prep.split(filled)
+    return pd.concat([train.assign(split="train"), val.assign(split="validation")])
+
+
+@pytest.fixture(scope="module")
+def columns(prepared):
+    return hol.interaction_columns(prepared[prepared["split"] == "train"])
+
+
+def test_k14_catches_feature_from_sales(prepared, columns):
+    def leaky(data):
+        # "open" read from the sales: a holiday counts only if revenue is high
+        out = hol.holiday_features(data, columns)
+        out["open_holiday_g1"] = ((out["day_type"] == "open_holiday") & (data["Umsatz"] > 100)).astype(int)
+        return out
+    with pytest.raises(AssertionError):
+        inv.check_holiday_feature_date_only(leaky, prepared)
+
+
+def test_k15_catches_good_friday_as_open(prepared):
+    def with_good_friday(dates):
+        types = hol.day_type(dates)
+        is_good_friday = pd.Series(pd.to_datetime(dates)).reset_index(drop=True).isin(inv.GOOD_FRIDAYS)
+        return types.mask(is_good_friday, "open_holiday")
+    with pytest.raises(AssertionError):
+        inv.check_holiday_day_types(hol.day_type(prepared["Datum"]), prepared, with_good_friday)
+
+
+def test_k15_catches_missing_special_day(prepared):
+    broken = hol.day_type(prepared["Datum"])
+    broken[(prepared["Datum"] == pd.Timestamp("2015-12-31")).to_numpy()] = "normal"
+    with pytest.raises(AssertionError):
+        inv.check_holiday_day_types(broken, prepared, hol.day_type)
+
+
+def test_k16_catches_column_in_wrong_group(prepared, columns):
+    broken = hol.holiday_features(prepared, columns)
+    # pretend the bread column is also set on the rolls rows of the same holidays
+    broken.loc[(broken["day_type"] == "open_holiday") & (broken["Warengruppe"] == 2), "open_holiday_g1"] = 1
+    with pytest.raises(AssertionError):
+        inv.check_holiday_interactions(broken, columns, prepared["split"] == "train")
+
+
+def test_k16_catches_always_zero_column(prepared, columns):
+    extra = [*columns, "open_holiday_g6"]  # seasonal bread never sells on an open holiday
+    with pytest.raises(AssertionError):
+        inv.check_holiday_interactions(hol.holiday_features(prepared, extra), extra, prepared["split"] == "train")

@@ -119,7 +119,7 @@ Run with `uv run pytest checks`. Confirmed by the team on 2026-11-22.
 | K16 | holiday feature | interaction columns: at most one 1 per row, only in the row's own group; no column always 0 |
 | K17 | submission | header `id,umsatz`; ids exactly those of the Kaggle test file, none missing or duplicated; all values > 0 |
 
-**Added 2026-11-27** with the [analysis plan](issues/plan-databakery.md): K6b, K10b and K14–K17, confirmed by HeldDerTierwelt, still to be reviewed by the team. Not implemented yet. The checkpoints per pipeline stage, each with its source of truth, are in the plan.
+**Added 2026-11-27** with the [analysis plan](issues/plan-databakery.md): K6b, K10b and K14–K17, confirmed by HeldDerTierwelt, still to be reviewed by the team. K14–K16 implemented and passing (2026-11-27): [checks/test_holiday_feature.py](checks/test_holiday_feature.py), code in [src/bakery_holidays.py](src/bakery_holidays.py), notebook [0_DataPreparation/alexander-holidays.ipynb](0_DataPreparation/alexander-holidays.ipynb). K6b, K10b and K17 not implemented yet. The checkpoints per pipeline stage, each with its source of truth, are in the plan.
 
 ---
 

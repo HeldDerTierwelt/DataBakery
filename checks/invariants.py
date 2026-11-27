@@ -1,4 +1,4 @@
-"""Check functions K1-K6 and K13 (canvas block 8).
+"""Check functions K1-K6 and K13-K16 (canvas block 8).
 
 Each function compares pipeline output with an independent source of truth
 (the raw file, the calendar, a fixed list from the data fact sheet, or the
@@ -191,3 +191,89 @@ def check_public_holidays(public_holidays: pd.DataFrame, sales: pd.DataFrame) ->
         f"Public holidays without sales that are not known closed days: {[d.date() for d in not_known_closed]}"
     )
     assert len(closed_dates) == 26, f"{len(closed_dates)} closed public holidays, expected 26"
+
+
+# --- K14-K16: holiday feature (DECISIONS.md, 2026-11-26 and 2026-11-27) --------
+
+# Sales dates per holiday day type, written out literally (independent of the
+# `holidays` package). Open public holidays: the 20 dates of K13. Special days:
+# Easter Sunday and Whit Sunday (Easter + 49 days), 24 and 31 December.
+DAY_TYPE_DATES = {
+    "open_holiday": OPEN_HOLIDAYS,
+    "easter_whit_sunday": pd.to_datetime([
+        "2014-04-20", "2014-06-08", "2015-04-05", "2015-05-24", "2016-03-27",
+        "2016-05-15", "2017-04-16", "2017-06-04", "2018-04-01", "2018-05-20",
+    ]),
+    "christmas_eve": pd.to_datetime([
+        "2013-12-24", "2014-12-24", "2015-12-24", "2016-12-24", "2017-12-24",
+    ]),
+    "new_years_eve": pd.to_datetime([
+        "2013-12-31", "2014-12-31", "2015-12-31", "2016-12-31", "2017-12-31",
+    ]),
+}
+# Training / validation days per type (DECISIONS.md, "Holiday feature with four day types").
+DAY_TYPE_COUNTS = {
+    "open_holiday": (17, 3),
+    "easter_whit_sunday": (8, 2),
+    "christmas_eve": (4, 1),
+    "new_years_eve": (4, 1),
+}
+# Good Friday 2014-2019: closed by law (LÖffZG SH § 4), never an open public holiday.
+GOOD_FRIDAYS = pd.to_datetime([
+    "2014-04-18", "2015-04-03", "2016-03-25", "2017-04-14", "2018-03-30", "2019-04-19",
+])
+
+
+def check_holiday_feature_date_only(feature_fn, data: pd.DataFrame) -> None:
+    """K14: the holiday features depend on the date (and group) only, not on revenue."""
+    base = feature_fn(data)
+    shuffled = data.copy()
+    shuffled["Umsatz"] = shuffled["Umsatz"].sample(frac=1, random_state=0).to_numpy()
+    without_revenue = data.drop(columns=["Umsatz"])
+    assert feature_fn(shuffled).equals(base), (
+        "Holiday features change when revenue is shuffled: they use the target"
+    )
+    try:
+        no_revenue = feature_fn(without_revenue)
+    except KeyError as err:
+        raise AssertionError(f"Holiday features need the revenue column: {err}") from err
+    assert no_revenue.equals(base), "Holiday features differ when revenue is removed"
+
+
+def check_holiday_day_types(day_types: pd.Series, data: pd.DataFrame, day_type_fn) -> None:
+    """K15: day types fall exactly on the known dates, with the decided counts per split."""
+    days = data[["Datum", "split"]].assign(day_type=day_types.to_numpy()).drop_duplicates("Datum")
+    assert set(days["day_type"]) <= {"normal", *DAY_TYPE_DATES}, (
+        f"Unknown day types: {set(days['day_type']) - {'normal', *DAY_TYPE_DATES}}"
+    )
+    for t, known in DAY_TYPE_DATES.items():
+        found = pd.DatetimeIndex(sorted(days.loc[days["day_type"] == t, "Datum"]))
+        expected = known[known.isin(days["Datum"])]
+        assert found.equals(expected), (
+            f"{t}: unexpected {[d.date() for d in found.difference(expected)]}, "
+            f"missing {[d.date() for d in expected.difference(found)]}"
+        )
+        n_train = (days.loc[days["day_type"] == t, "split"] == "train").sum()
+        n_val = (days.loc[days["day_type"] == t, "split"] == "validation").sum()
+        assert (n_train, n_val) == DAY_TYPE_COUNTS[t], (
+            f"{t}: {n_train} training / {n_val} validation days, expected {DAY_TYPE_COUNTS[t]}"
+        )
+    good_friday = day_type_fn(pd.Series(GOOD_FRIDAYS))
+    assert (good_friday != "open_holiday").all(), "Good Friday is labelled an open public holiday"
+
+
+def check_holiday_interactions(features: pd.DataFrame, columns: list[str], train_mask: pd.Series) -> None:
+    """K16: each interaction column is 1 only on its day type and in its own product group."""
+    assert columns, "No interaction columns"
+    values = features[columns]
+    assert set(pd.unique(values.to_numpy().ravel())) <= {0, 1}, "Interaction columns have values other than 0/1"
+    assert (values.sum(axis=1) <= 1).all(), "A row has more than one interaction column set to 1"
+    for col in columns:
+        t, g = col.rsplit("_g", 1)
+        expected = (features["day_type"] == t) & (features["Warengruppe"] == int(g))
+        assert values[col].astype(bool).equals(expected), f"{col} is 1 on the wrong rows"
+        assert values.loc[train_mask, col].sum() > 0, f"{col} is always 0 in training"
+    special = features.loc[train_mask, "day_type"] != "normal"
+    assert (values.loc[train_mask].sum(axis=1) == special.astype(int)).all(), (
+        "A special-day row in training has no interaction column"
+    )
